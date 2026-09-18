@@ -29,9 +29,7 @@ signed char device_info_get_identification(char *buffer_ptr, size_t buffer_size)
     return -1;
   }
 
-  // SPsec302 V40 Section 2.3.6: Register 81h - Device Identification
-  // Should include manufacturer_ptr, product code, and serial_ptr number
-  // For Linux platform, use hostname and system information as mock
+  // Register 81h - Device Identification (mock for Linux).
 
   struct utsname sys_info;
   if (uname(&sys_info) == 0) {
@@ -64,9 +62,7 @@ signed char device_info_get_mcu_serial(uint8_t *serial_ptr) {
     return -1;
   }
 
-  // SPsec302 V40 Section 2.3.6: Register 82h - MCU Serial Number
-  // Should return 128-bit (16-byte) MCU serial_ptr number
-  // For Linux platform, generate a pseudo-unique ID based on system information
+  // Register 82h - 128-bit MCU Serial Number (pseudo-unique ID for Linux).
 
   // Try to read from /etc/machine-id or generate from hostname
   FILE *f_ptr = fopen("/etc/machine-id", "r");
@@ -81,9 +77,7 @@ signed char device_info_get_mcu_serial(uint8_t *serial_ptr) {
 
       // Parse hex_ptr string to bytes
       memset(serial_ptr, 0, 16);
-      // machine-id is 32 hex_ptr chars = 16 bytes. The bound used to be `i < 16`,
-      // which is an index into the *hex_ptr string*, so only the first 8 bytes of
-      // the serial_ptr were ever filled and the rest stayed zero.
+      // Convert 32-character hex machine-id to 16-byte serial.
       size_t id_len = strlen(machine_id);
       for (size_t i = 0; i + 1 < id_len && i < 32; i += 2) {
         char hex_byte[3] = {machine_id[i], machine_id[i + 1], '\0'};

@@ -9,13 +9,7 @@
  * included within the root folder of this work.
  */
 
-/**
- * @file can_interface.c
- * @brief LPC55S16-EVK FlexCAN FD implementation of the CAN HAL.
- *
- * Uses MCUXpresso SDK FlexCAN driver. Requires MCUX_SDK_PATH to be set.
- * Reference: LPC55S16 FlexCAN chapter, MCUXpresso SDK flexcan_fd_driver.
- */
+/* LPC55S16-EVK FlexCAN FD implementation of the CAN HAL. */
 
 #include "communication_interface.h"
 #include "spsec_common.h"

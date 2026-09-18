@@ -77,7 +77,5 @@ void led_status_update(spsec_state_t state, bool alert_flag) {
     break;
   }
 
-  // TODO: For embedded systems, implement actual LED hardware control here:
-  // - Set GPIO pins for red/green LEDs
-  // - Implement blinking patterns using timers
+  // Embedded targets control status LED GPIO pins here.
 }

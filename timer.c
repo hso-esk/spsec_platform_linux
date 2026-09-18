@@ -42,13 +42,17 @@ static void *timer_thread(void *arg_ptr) {
   FreeRunningTimer *timer_ptr = (FreeRunningTimer *)arg_ptr;
 
   while (timer_ptr->running) {
+    pthread_mutex_lock(&timer_ptr->lock);
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);
 
-    pthread_mutex_lock(&timer_ptr->lock);
-    uint64_t diff_ns =
-        (uint64_t)(now.tv_sec - timer_ptr->start_mono.tv_sec) * 1000000000ULL +
-        (uint64_t)(now.tv_nsec - timer_ptr->start_mono.tv_nsec);
+    int64_t sec_diff = (int64_t)now.tv_sec - (int64_t)timer_ptr->start_mono.tv_sec;
+    int64_t nsec_diff = (int64_t)now.tv_nsec - (int64_t)timer_ptr->start_mono.tv_nsec;
+    int64_t diff_ns_signed = sec_diff * 1000000000LL + nsec_diff;
+    if (diff_ns_signed < 0) {
+      diff_ns_signed = 0;
+    }
+    uint64_t diff_ns = (uint64_t)diff_ns_signed;
     uint64_t diff_us = diff_ns / 1000ULL;
 
     // Apply speed scaling based on seconds_symbol_index
@@ -106,9 +110,7 @@ signed char timer_init(FreeRunningTimer *timer_ptr, uint8_t seconds_symbol_index
              "Loaded persistent timestamp_ptr from storage, incremented by %llu ticks",
              (unsigned long long)TIMER_REBOOT_MARGIN_TICKS);
   } else {
-    // No stored timestamp: seed non-zero via CSPRNG (SPsec302 V40 2.11 bans
-    // a zero start value). getrandom() over rand()/time() because this seeds
-    // the AEAD nonce's high bytes and must not be predictable from boot time.
+    // Seed non-zero initial timestamp using CSPRNG.
     ssize_t rnd =
         getrandom(&persistent_timestamp, sizeof(persistent_timestamp), 0);
     if (rnd != (ssize_t)sizeof(persistent_timestamp)) {
@@ -151,9 +153,13 @@ void timer_set_tick_ns(FreeRunningTimer *timer_ptr, uint32_t tick_ns) {
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);
 
-    uint64_t diff_ns =
-        (uint64_t)(now.tv_sec - timer_ptr->start_mono.tv_sec) * 1000000000ULL +
-        (uint64_t)(now.tv_nsec - timer_ptr->start_mono.tv_nsec);
+    int64_t sec_diff = (int64_t)now.tv_sec - (int64_t)timer_ptr->start_mono.tv_sec;
+    int64_t nsec_diff = (int64_t)now.tv_nsec - (int64_t)timer_ptr->start_mono.tv_nsec;
+    int64_t diff_ns_signed = sec_diff * 1000000000LL + nsec_diff;
+    if (diff_ns_signed < 0) {
+      diff_ns_signed = 0;
+    }
+    uint64_t diff_ns = (uint64_t)diff_ns_signed;
     uint64_t diff_us = diff_ns / 1000ULL;
 
     if (timer_ptr->seconds_symbol_index != 8) {
@@ -216,9 +222,7 @@ signed char timer_set_timestamp(FreeRunningTimer *timer_ptr,
   }
 
   pthread_mutex_lock(&timer_ptr->lock);
-  // Once synced, reject large backward jumps: replaying an old sync broadcast
-  // could re-enter a spent nonce epoch. The first set is always accepted, since
-  // it just replaces the arbitrary random init epoch.
+  // Reject backward jumps once synced to prevent nonce reuse.
   if (timer_ptr->synced) {
     uint64_t current = 0;
     for (int i = 0; i < 8; i++) {

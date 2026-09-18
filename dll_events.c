@@ -73,9 +73,7 @@ uint16_t dll_events_check_tx_overrun(DLLEventContext *ctx_ptr) {
     return 0;
   }
 
-  // SPsec302 V40 Section 8.2: DLL_TX_OVERRUN (0xDE02)
-  // Detection of transmit buffer overrun
-  // On Linux, this can be detected by checking if write() fails with ENOBUFS
+  // DLL_TX_OVERRUN (0xDE02): transmit buffer overrun detection.
 
   if (ctx_ptr->tx_overrun_detected) {
     ctx_ptr->tx_overrun_detected = false; // Reset after reporting
@@ -94,9 +92,7 @@ uint16_t dll_events_check_address_guard(DLLEventContext *ctx_ptr,
     return 0;
   }
 
-  // SPsec302 V40 Section 8.2: DLL_ADRID_GUARD (0xDE03)
-  // Detection of injection of own used Address ID
-  // Check if received CAN ID matches any locally registered CAN ID
+  // DLL_ADRID_GUARD (0xDE03): injection of own address ID detection.
 
   for (uint8_t i = 0; i < ctx_ptr->own_can_id_count; i++) {
     if (ctx_ptr->own_can_ids[i] == can_id) {

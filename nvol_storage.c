@@ -28,6 +28,41 @@ static char *g_base_path_ptr = NULL;
 static bool g_use_bin_format = true;
 static const char *logger_name_ptr = "nvol_storage";
 
+static int mkdir_recursive(const char *path, mode_t mode) {
+  char temp[512];
+  char *p = NULL;
+  size_t len;
+
+  if (!path || !*path) {
+    return -1;
+  }
+  snprintf(temp, sizeof(temp), "%s", path);
+  len = strlen(temp);
+  if (temp[len - 1] == '/') {
+    temp[len - 1] = '\0';
+  }
+
+  for (p = temp + 1; *p; p++) {
+    if (*p == '/') {
+      *p = '\0';
+      struct stat st;
+      if (stat(temp, &st) != 0) {
+        if (mkdir(temp, mode) != 0 && errno != EEXIST) {
+          return -1;
+        }
+      }
+      *p = '/';
+    }
+  }
+  struct stat st;
+  if (stat(temp, &st) != 0) {
+    if (mkdir(temp, mode) != 0 && errno != EEXIST) {
+      return -1;
+    }
+  }
+  return 0;
+}
+
 signed char platform_nvol_storage_init(const char *base_path_ptr, bool use_bin_format) {
   if (!base_path_ptr) {
     LOG_ERROR(logger_name_ptr, "Base path_ptr is NULL");
@@ -50,7 +85,7 @@ signed char platform_nvol_storage_init(const char *base_path_ptr, bool use_bin_f
   // Create base directory if it doesn't exist
   struct stat st = {0};
   if (stat(g_base_path_ptr, &st) == -1) {
-    if (mkdir(g_base_path_ptr, 0700) != 0) {
+    if (mkdir_recursive(g_base_path_ptr, 0700) != 0) {
       LOG_ERROR(logger_name_ptr, "Failed to create base directory '%s': %s",
                 g_base_path_ptr, strerror(errno));
       free(g_base_path_ptr);
@@ -695,9 +730,7 @@ signed char platform_nvol_storage_read_varlen_alloc(const char *path_ptr, uint8_
   return 0;
 }
 
-// Look up key_ptr's hex value in a "key:hexbytes" file. Lives here (not
-// common/) to keep filesystem I/O out of portable code; a no-filesystem
-// target should replace this with a flash/OTP read.
+// Look up key hex value in a provisioning file for initial setup.
 uint8_t *platform_retrieve_dict_from_file(const char *filename_ptr, const char *key_ptr,
                                  size_t *out_len_ptr) {
   FILE *file_ptr = fopen(filename_ptr, "r");

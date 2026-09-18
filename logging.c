@@ -9,12 +9,7 @@
  * included within the root folder of this work.
  */
 
-/**
- * Linux/PC log sink: writes formatted lines to stdout or a rotating file.
- * The only place touching filesystem/stdio for logging - common/spsec_common.c
- * just formats and calls platform_log_write(). Port by swapping this file
- * for one that writes to a UART.
- */
+/* Linux log sink: writes formatted log lines to stdout or file. */
 
 #include "logging.h"
 

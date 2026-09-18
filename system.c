@@ -9,11 +9,7 @@
  * included within the root folder of this work.
  */
 
-/**
- * Linux process/OS lifecycle HAL: wires SIGINT/SIGTERM to the portable
- * "request stop" callback, keeping POSIX signal handling out of shared code.
- * Port by replacing with the target's shutdown source (or a no-op).
- */
+/* Linux process lifecycle: wires SIGINT/SIGTERM to stop callback. */
 
 #include "platform_system.h"
 
